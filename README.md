@@ -1,6 +1,6 @@
-# `cimg/rust` [![CircleCI Build Status](https://circleci.com/gh/CircleCI-Public/cimg-rust.svg?style=shield&circle-token=7b0f77be6efffc5f6143846a8b9e066298288180 "CircleCI Build Status")](https://circleci.com/gh/CircleCI-Public/cimg-rust) [![GitHub License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://raw.githubusercontent.com/CircleCI-Public/cimg-rust/master/LICENSE) [![CircleCI Community](https://img.shields.io/badge/community-CircleCI%20Discuss-343434.svg)](https://discuss.circleci.com/c/ecosystem/images)
+# `cimg/rust` [![CircleCI Build Status](https://circleci.com/gh/CircleCI-Public/cimg-rust.svg?style=shield "CircleCI Build Status")](https://circleci.com/gh/CircleCI-Public/cimg-rust) [![GitHub License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://raw.githubusercontent.com/CircleCI-Public/cimg-rust/master/LICENSE) [![CircleCI Community](https://img.shields.io/badge/community-CircleCI%20Discuss-343434.svg)](https://discuss.circleci.com/c/ecosystem/images)
 
-Introduction text.
+Prototype CircleCI images for Rust, extending CircleCI's [prototype `cimg/base` image](https://github.com/CircleCI-Public/cimg-base).
 
 ## Purpose
 
