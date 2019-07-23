@@ -65,12 +65,12 @@ jobs:
           command: |
             source ./manifest
 
-            echo "${CIRCLE_BRANCH}"
+            BRANCH="${CIRCLE_BRANCH:-master}"
 
             for version in "${versions[@]}"
             do
               curl -u ${CIRCLE_TOKEN}: -X POST --header "Content-Type: application/json" -d "{
-                \"branch\": \"${CIRCLE_BRANCH}\",
+                \"branch\": \"${BRANCH}\",
                 \"parameters\": {
                   \"commit\": false,
                   \"build-rust<<#parameters.node>>-node<</parameters.node>>\": true,
