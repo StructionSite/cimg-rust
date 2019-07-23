@@ -15,7 +15,7 @@ To create the functionality of a `-browsers` variant, use [CircleCI's `browser-t
 ## Tags
 
 ### `<rust-version>-<year>.<month>`, `<rust-version>-<year>.<month>-node`
-Mostly immutable (except in the case of CVEs or severe bugs) monthly release tags for this image and its Node variant. Any new or removed tools from the base image in the last month will be reflected in this image release. For example, the `1.34.0-2019.04`/`1.34.0-2019.04-node` tags would include any changes to this repo/image that occurred in March 2019. Monthly releases are built on the 2nd of every month.
+Mostly immutable (except in the case of CVEs or severe bugs) monthly release tags for this image and its Node variant. Any new or removed tools from the base image in the last month will be reflected in this image release. For example, the `1.34.0-2019.04`/`1.34.0-2019.04-node` tags would include any changes to this repo/image that occurred in March 2019. Monthly releases are built on the 3rd of every month.
 
 ### `<rust-version>-stable`, `<rust-version>-stable-node`
 Mutable tags representing the most recent monthly release of this image and its Node variant. For example, if today's date was April 15th, 2019, then the `1.34.0-stable`/`1.34.0-stable-node` tags would be aliases for the `1.34.0-2019.04`/`1.34.0-2019.04-node` tags.

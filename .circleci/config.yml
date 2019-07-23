@@ -3,7 +3,7 @@ version: 2.1
 orbs:
   bt: circleci/build-tools@2.6.3
   cimg: cci-dev/cimg@0.0.24
-  docker: circleci/docker@0.5.12
+  docker: circleci/docker@0.5.13
 
 parameters:
   commit:
@@ -63,12 +63,10 @@ jobs:
           command: |
             source ./manifest
 
-            BRANCH="${CIRCLE_BRANCH:-master}"
-
             for version in "${versions[@]}"
             do
               curl -u ${CIRCLE_TOKEN}: -X POST --header "Content-Type: application/json" -d "{
-                \"branch\": \"${BRANCH}\",
+                \"branch\": \"${CIRCLE_BRANCH:-master}\",
                 \"parameters\": {
                   \"commit\": false,
                   \"build-rust<<#parameters.node>>-node<</parameters.node>>\": true,
