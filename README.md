@@ -41,7 +41,7 @@ To add a new version of Rust, add it to the `versions` array in the `manifests` 
 Upon successful commits to non-master branches of this repository, Rust versions of this image and its Node variant will be pushed to `ccitest/rust` for any requisite post-deployment testing. Tags there will represent the branch and commit hash that triggered them. For example, a successful commit to a branch of this repository called `dev` would result in the creation of the following image/tag: `ccitest/rust:<rust-version>-dev-${CIRCLE_SHA1:0:7}"`, where `${CIRCLE_SHA1:0:7}"` represents the first six characters of that particular commit hash.
 
 ### Patching bugs and vulnerabilities
-Monthly release tags can be manually re-published to patch vulnerabilities or severe bugs via a pushing a `git` tag matching the desired Docker tag.
+Monthly release tags can be manually re-published to patch vulnerabilities or severe bugs via a pushing a `git` tag that contains the string `monthly`. This tag will trigger a workflow that will rebuild all current `<rust-version>-<year>.<month>` and `<rust-version>-<year>.<month>-node` tags, as well as the `<rust-version>-stable`, `<rust-version>-stable-node`, and `latest` alias tags.
 
 ### Contributing
 We welcome [issues](https://github.com/CircleCI-Public/cimg-rust/issues) to and [pull requests](https://github.com/CircleCI-Public/cimg-rust/pulls) against this repository!
