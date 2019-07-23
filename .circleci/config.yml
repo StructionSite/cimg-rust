@@ -18,10 +18,15 @@ parameters:
     type: boolean
     default: false
 
-  tag:
+  image-tag:
     type: string
     default: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
     # edge, stable
+
+  publish-tags:
+    type: string
+    default: ""
+    # latest, stable, stable-node
 
   target:
     type: enum
@@ -40,10 +45,14 @@ jobs:
       node:
         type: boolean
         default: false
-      tag:
+      image-tag:
         type: string
         default: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
         # edge, stable
+      publish-tags:
+        type: string
+        default: ""
+        # latest, stable, stable-node,
       target:
         type: enum
         enum: [ccitest, cimg]
@@ -66,7 +75,8 @@ jobs:
                   \"commit\": false,
                   \"build-rust<<#parameters.node>>-node<</parameters.node>>\": true,
                   \"rust-version\": \"${version}\",
-                  \"tag\": \"<<parameters.tag>>\",
+                  \"image-tag\": \"<<parameters.image-tag>>\",
+                  \"publish-tags\": \"<<parameters.publish-tags>>\",
                   \"target\": \"<<parameters.target>>\"
                 }
               }" https://circleci.com/api/v2/project/gh/CircleCI-Public/cimg-rust/pipeline
@@ -136,6 +146,69 @@ node-dockerfiles: &node-dockerfiles
 
 
 workflows:
+  monthly-cron-stable:
+    triggers:
+      - schedule:
+          cron: "0 0 3 * *"
+          filters: *master-filters
+    jobs:
+      - prepare-dockerfiles:
+          name: prepare-dockerfiles-rust-stable
+          base-org-image-tag: cimg/base:stable
+          step-name: Prepare cimg/rust:stable Dockerfiles from template
+          filters: *master-filters
+
+      - docker/hadolint:
+          name: lint-rust-stable
+          checkout: false
+          attach-workspace: true
+          workspace-root: ~/
+          dockerfiles: *dockerfiles
+          filters: *master-filters
+          requires: [prepare-dockerfiles-rust-stable]
+
+      - trigger-pipeline-builds:
+          name: trigger-pipeline-builds-stable
+          context: image-publishing
+          image-tag: "$( date +%Y.%m )"
+          target: cimg
+          publish-tags: stable,latest
+          filters: *master-filters
+          requires: [lint-rust-stable]
+
+  monthly-cron-stable-node:
+    triggers:
+      - schedule:
+          cron: "0 0 3 * *"
+          filters: *master-filters
+    jobs:
+      - prepare-dockerfiles:
+          name: prepare-dockerfiles-rust-stable-node
+          base-org-image-tag: cimg/base:stable-node
+          step-name: Prepare cimg/rust:stable-node Dockerfiles from template
+          variant: node
+          filters: *master-filters
+
+      - docker/hadolint:
+          name: lint-rust-stable-node
+          context: image-publishing
+          checkout: false
+          attach-workspace: true
+          workspace-root: ~/
+          dockerfiles: *node-dockerfiles
+          filters: *master-filters
+          requires: [prepare-dockerfiles-rust-stable-node]
+
+      - trigger-pipeline-builds:
+          name: trigger-pipeline-builds-stable-node
+          context: image-publishing
+          image-tag: "$( date +%Y.%m )"
+          target: cimg
+          node: true
+          publish-tags: stable-node
+          filters: *master-filters
+          requires: [lint-rust-stable-node]
+
   commit-ccitest-lint-dev:
     when: <<pipeline.parameters.commit>>
     jobs:
@@ -157,6 +230,7 @@ workflows:
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-ccitest
           context: image-publishing
+          publish-tags: latest
           filters: *dev-filters
           requires: [lint-rust-ccitest]
 
@@ -208,7 +282,8 @@ workflows:
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-edge
           context: image-publishing
-          tag: edge
+          image-tag: edge
+          publish-tags: latest
           target: cimg
           filters: *master-filters
           requires: [lint-rust-edge]
@@ -236,7 +311,7 @@ workflows:
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-edge-node
           context: image-publishing
-          tag: edge
+          image-tag: edge
           target: cimg
           node: true
           filters: *master-filters
@@ -252,12 +327,12 @@ workflows:
           cache-key: rust-dockerfiles-{{ .Branch }}-{{ .Revision }}
           dockerfile-path: ~/project/rust/<<pipeline.parameters.rust-version>>
           image-name: <<pipeline.parameters.target>>/rust
-          image-tag: <<pipeline.parameters.rust-version>>-<<pipeline.parameters.tag>>
+          image-tag: <<pipeline.parameters.rust-version>>-<<pipeline.parameters.image-tag>>
           extra-build-args: --pull
           goss-yaml-dir-path: ~/project
           test-suite-name: rust
           deploy: true
-          publish-tags: latest
+          publish-tags: <<pipeline.parameters.publish-tags>>
 
   build-test-deploy-node:
     when: <<pipeline.parameters.build-rust-node>>
@@ -269,8 +344,9 @@ workflows:
           cache-key: rust-dockerfiles-node-{{ .Branch }}-{{ .Revision }}
           dockerfile-path: ~/project/node/<<pipeline.parameters.rust-version>>
           image-name: <<pipeline.parameters.target>>/rust
-          image-tag: <<pipeline.parameters.rust-version>>-<<pipeline.parameters.tag>>-node
+          image-tag: <<pipeline.parameters.rust-version>>-<<pipeline.parameters.image-tag>>-node
           extra-build-args: --pull
           goss-yaml-dir-path: ~/project
           test-suite-name: rust-node
           deploy: true
+          publish-tags: <<pipeline.parameters.publish-tags>>
