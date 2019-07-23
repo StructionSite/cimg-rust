@@ -216,7 +216,6 @@ workflows:
           target: cimg
           monthly: true
           node: true
-          # publish-tags: stable-node
           filters: *monthly-tag-jobs-filters
           requires: [lint-rust-stable-node]
 
@@ -241,7 +240,6 @@ workflows:
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-ccitest
           context: image-publishing
-          test: true
           filters: *dev-filters
           requires: [lint-rust-ccitest]
 
@@ -268,7 +266,6 @@ workflows:
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-ccitest-node
           context: image-publishing
-          test: true
           node: true
           filters: *dev-filters
           requires: [lint-rust-ccitest-node]
@@ -296,7 +293,6 @@ workflows:
           context: image-publishing
           image-tag: edge
           target: cimg
-          edge: true
           filters: *master-filters
           requires: [lint-rust-edge]
 
@@ -325,7 +321,6 @@ workflows:
           context: image-publishing
           image-tag: edge
           target: cimg
-          edge: true
           node: true
           filters: *master-filters
           requires: [lint-rust-edge-node]
