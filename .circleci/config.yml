@@ -114,7 +114,7 @@ jobs:
               sed -r -e 's!%%BASE_ORG_BASE_IMAGE_BASE_TAG%%!'"$BASE"'!g' \
                 ~/project/Dockerfile.template > "$version/Dockerfile"
 
-              perl -i -pe 's!%%RUST_VERSION%%!'"$version"'!g' "$version/Dockerfile"
+              perl -i -pe 's!%%MAIN_VERSION%%!'"$version"'!g' "$version/Dockerfile"
             done
 
       - save_cache:
