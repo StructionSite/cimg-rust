@@ -75,7 +75,7 @@ jobs:
                   \"rust-version\": \"${version}\",
                   \"image-tag\": \"<<parameters.image-tag>>\",
                   \"target\": \"<<parameters.target>>\",
-                  \"monthly\": \"<<parameters.monthly>>\"
+                  \"monthly\": <<parameters.monthly>>
                 }
               }" https://circleci.com/api/v2/project/gh/CircleCI-Public/cimg-rust/pipeline
             done
