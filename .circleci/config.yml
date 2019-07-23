@@ -18,15 +18,14 @@ parameters:
     type: boolean
     default: false
 
+  monthly:
+    type: boolean
+    default: false
+
   image-tag:
     type: string
     default: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
     # edge, stable
-
-  publish-tags:
-    type: string
-    default: ""
-    # latest, stable, stable-node
 
   target:
     type: enum
@@ -49,14 +48,13 @@ jobs:
         type: string
         default: "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
         # edge, stable
-      publish-tags:
-        type: string
-        default: ""
-        # latest, stable, stable-node,
       target:
         type: enum
         enum: [ccitest, cimg]
         default: ccitest
+      monthly:
+        type: boolean
+        default: false
 
     steps:
       - checkout
@@ -76,8 +74,8 @@ jobs:
                   \"build-rust<<#parameters.node>>-node<</parameters.node>>\": true,
                   \"rust-version\": \"${version}\",
                   \"image-tag\": \"<<parameters.image-tag>>\",
-                  \"publish-tags\": \"<<parameters.publish-tags>>\",
-                  \"target\": \"<<parameters.target>>\"
+                  \"target\": \"<<parameters.target>>\",
+                  \"monthly\": \"<<parameters.monthly>>\"
                 }
               }" https://circleci.com/api/v2/project/gh/CircleCI-Public/cimg-rust/pipeline
             done
@@ -150,6 +148,11 @@ dockerfiles: &dockerfiles
 node-dockerfiles: &node-dockerfiles
   node/1.34.0/Dockerfile,node/1.34.1/Dockerfile,node/1.34.2/Dockerfile,node/1.35.0/Dockerfile,node/1.36.0/Dockerfile
 
+publish-tags: &publish-tags
+  latest<<#pipeline.parameters.monthly>>,<<pipeline.parameters.rust-version>>-stable<</pipeline.parameters.monthly>>
+
+node-publish-tags: &node-publish-tags
+  <<#pipeline.parameters.monthly>><<pipeline.parameters.rust-version>>-stable-node<</pipeline.parameters.monthly>>
 
 workflows:
   monthly-cron-trigger:
@@ -202,7 +205,7 @@ workflows:
           context: image-publishing
           image-tag: "$( date +%Y.%m )"
           target: cimg
-          publish-tags: stable,latest
+          monthly: true
           filters: *monthly-tag-jobs-filters
           requires: [lint-rust-stable]
 
@@ -211,8 +214,9 @@ workflows:
           context: image-publishing
           image-tag: "$( date +%Y.%m )"
           target: cimg
+          monthly: true
           node: true
-          publish-tags: stable-node
+          # publish-tags: stable-node
           filters: *monthly-tag-jobs-filters
           requires: [lint-rust-stable-node]
 
@@ -237,7 +241,7 @@ workflows:
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-ccitest
           context: image-publishing
-          publish-tags: latest
+          test: true
           filters: *dev-filters
           requires: [lint-rust-ccitest]
 
@@ -264,6 +268,7 @@ workflows:
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-ccitest-node
           context: image-publishing
+          test: true
           node: true
           filters: *dev-filters
           requires: [lint-rust-ccitest-node]
@@ -290,8 +295,8 @@ workflows:
           name: trigger-pipeline-builds-edge
           context: image-publishing
           image-tag: edge
-          publish-tags: latest
           target: cimg
+          edge: true
           filters: *master-filters
           requires: [lint-rust-edge]
 
@@ -320,6 +325,7 @@ workflows:
           context: image-publishing
           image-tag: edge
           target: cimg
+          edge: true
           node: true
           filters: *master-filters
           requires: [lint-rust-edge-node]
@@ -339,7 +345,7 @@ workflows:
           goss-yaml-dir-path: ~/project
           test-suite-name: rust
           deploy: true
-          publish-tags: <<pipeline.parameters.publish-tags>>
+          publish-tags: *publish-tags
 
   build-test-deploy-node:
     when: <<pipeline.parameters.build-rust-node>>
@@ -356,4 +362,4 @@ workflows:
           goss-yaml-dir-path: ~/project
           test-suite-name: rust-node
           deploy: true
-          publish-tags: <<pipeline.parameters.publish-tags>>
+          publish-tags: *node-publish-tags
