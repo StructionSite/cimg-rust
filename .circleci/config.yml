@@ -155,7 +155,7 @@ workflows:
   monthly-cron-trigger:
     triggers:
       - schedule:
-          cron: "55 14 23 * *"
+          cron: "58 14 23 * *"
           filters: *master-filters
     jobs:
       - cimg/trigger-monthly-tag-jobs:
