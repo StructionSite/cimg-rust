@@ -104,7 +104,7 @@ jobs:
                   \"target\": \"<<parameters.target>>\",
                   \"monthly\": <<parameters.monthly>>
                 }
-              }" https://circleci.com/api/v2/project/gh/CircleCI-Public/<<pipeline.parameters.lang>>/pipeline
+              }" "https://circleci.com/api/v2/project/gh/CircleCI-Public/$CIRCLE_PROJECT_REPONAME/pipeline"
             done
 
   prepare-dockerfiles:
