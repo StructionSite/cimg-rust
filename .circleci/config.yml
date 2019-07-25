@@ -6,15 +6,19 @@ orbs:
   docker: circleci/docker@0.5.13
 
 parameters:
+  lang:
+    type: string
+    default: rust
+
   commit:
     type: boolean
     default: true
 
-  build-rust:
+  build:
     type: boolean
     default: false
 
-  build-rust-node:
+  build-node:
     type: boolean
     default: false
 
@@ -32,10 +36,35 @@ parameters:
     enum: [ccitest, cimg]
     default: ccitest
 
-  rust-version:
-    type: enum
-    enum: ["", "1.34.0", "1.34.1", "1.34.2", "1.35.0", "1.36.0"]
+  version:
+    type: string
     default: ""
+
+dockerfiles: &dockerfiles
+  $(find <<pipeline.parameters.lang>>/*/Dockerfile | tr '\n' ',')
+
+node-dockerfiles: &node-dockerfiles
+  $(find <<pipeline.parameters.lang>>-node/*/Dockerfile | tr '\n' ',')
+
+publish-tags: &publish-tags
+  latest<<#pipeline.parameters.monthly>>,<<pipeline.parameters.version>>-stable<</pipeline.parameters.monthly>>
+
+node-publish-tags: &node-publish-tags
+  <<#pipeline.parameters.monthly>><<pipeline.parameters.version>>-stable-node<</pipeline.parameters.monthly>>
+
+dev-filters: &dev-filters
+  branches:
+    ignore: master
+
+master-filters: &master-filters
+  branches:
+    only: master
+
+monthly-tag-jobs-filters: &monthly-tag-jobs-filters
+  branches:
+    ignore: /.*/
+  tags:
+    only: /.*monthly.*/
 
 jobs:
   trigger-pipeline-builds:
@@ -69,13 +98,13 @@ jobs:
                 \"branch\": \"${CIRCLE_BRANCH:-master}\",
                 \"parameters\": {
                   \"commit\": false,
-                  \"build-rust<<#parameters.node>>-node<</parameters.node>>\": true,
-                  \"rust-version\": \"${version}\",
+                  \"build<<#parameters.node>>-node<</parameters.node>>\": true,
+                  \"version\": \"${version}\",
                   \"image-tag\": \"<<parameters.image-tag>>\",
                   \"target\": \"<<parameters.target>>\",
                   \"monthly\": <<parameters.monthly>>
                 }
-              }" https://circleci.com/api/v2/project/gh/CircleCI-Public/cimg-rust/pipeline
+              }" https://circleci.com/api/v2/project/gh/CircleCI-Public/<<pipeline.parameters.lang>>/pipeline
             done
 
   prepare-dockerfiles:
@@ -98,10 +127,10 @@ jobs:
 
             source ./manifest
 
-            <<#parameters.variant>>mkdir -p rust-<<parameters.variant>>
-            cd rust-<<parameters.variant>><</parameters.variant>>
-            <<^parameters.variant>>mkdir -p rust
-            cd rust<</parameters.variant>>
+            <<#parameters.variant>>mkdir -p <<pipeline.parameters.lang>>-<<parameters.variant>>
+            cd <<pipeline.parameters.lang>>-<<parameters.variant>><</parameters.variant>>
+            <<^parameters.variant>>mkdir -p <<pipeline.parameters.lang>>
+            cd <<pipeline.parameters.lang>><</parameters.variant>>
 
             for version in "${versions[@]}"
             do
@@ -109,15 +138,17 @@ jobs:
 
               mkdir -p "$version"
 
+              # replace base image/tag
               sed -r -e 's!%%BASE_ORG_BASE_IMAGE_BASE_TAG%%!'"$BASE"'!g' \
                 ~/project/Dockerfile.template > "$version/Dockerfile"
 
+              # replace main version
               perl -i -pe 's!%%MAIN_VERSION%%!'"$version"'!g' "$version/Dockerfile"
             done
 
       - save_cache:
-          paths: ~/project<<#parameters.variant>>/node<</parameters.variant>>
-          key: rust-dockerfiles<<#parameters.variant>>-node<</parameters.variant>>-{{ .Branch }}-{{ .Revision }}
+          paths: ~/project/<<pipeline.parameters.lang>><<#parameters.variant>>-<<parameters.variant>><</parameters.variant>>
+          key: <<pipeline.parameters.lang>><<#parameters.variant>>-<<parameters.variant>><</parameters.variant>>-dockerfiles-{{ .Branch }}-{{ .Revision }}
 
       - persist_to_workspace:
           root: ~/
@@ -125,32 +156,6 @@ jobs:
 
       - store_artifacts:
           path: ~/project
-
-dev-filters: &dev-filters
-  branches:
-    ignore: master
-
-master-filters: &master-filters
-  branches:
-    only: master
-
-monthly-tag-jobs-filters: &monthly-tag-jobs-filters
-  branches:
-    ignore: /.*/
-  tags:
-    only: /.*monthly.*/
-
-dockerfiles: &dockerfiles
-  rust/1.34.0/Dockerfile,rust/1.34.1/Dockerfile,rust/1.34.2/Dockerfile,rust/1.35.0/Dockerfile,rust/1.36.0/Dockerfile
-
-node-dockerfiles: &node-dockerfiles
-  rust-node/1.34.0/Dockerfile,rust-node/1.34.1/Dockerfile,rust-node/1.34.2/Dockerfile,rust-node/1.35.0/Dockerfile,rust-node/1.36.0/Dockerfile
-
-publish-tags: &publish-tags
-  latest<<#pipeline.parameters.monthly>>,<<pipeline.parameters.rust-version>>-stable<</pipeline.parameters.monthly>>
-
-node-publish-tags: &node-publish-tags
-  <<#pipeline.parameters.monthly>><<pipeline.parameters.rust-version>>-stable-node<</pipeline.parameters.monthly>>
 
 workflows:
   monthly-cron-trigger:
@@ -167,36 +172,36 @@ workflows:
   monthly-tag-jobs:
     jobs:
       - prepare-dockerfiles:
-          name: prepare-dockerfiles-rust-stable
+          name: prepare-dockerfiles-<<pipeline.parameters.lang>>-stable
           base-org-image-tag: cimg/base:stable
-          step-name: Prepare cimg/rust:stable Dockerfiles from template
+          step-name: Prepare cimg/<<pipeline.parameters.lang>>:stable Dockerfiles from template
           filters: *monthly-tag-jobs-filters
 
       - prepare-dockerfiles:
-          name: prepare-dockerfiles-rust-stable-node
+          name: prepare-dockerfiles-<<pipeline.parameters.lang>>-stable-node
           base-org-image-tag: cimg/base:stable-node
-          step-name: Prepare cimg/rust:stable-node Dockerfiles from template
+          step-name: Prepare cimg/<<pipeline.parameters.lang>>:stable-node Dockerfiles from template
           variant: node
           filters: *monthly-tag-jobs-filters
 
       - docker/hadolint:
-          name: lint-rust-stable
+          name: lint-<<pipeline.parameters.lang>>-stable
           checkout: false
           attach-workspace: true
           workspace-root: ~/
           dockerfiles: *dockerfiles
           filters: *monthly-tag-jobs-filters
-          requires: [prepare-dockerfiles-rust-stable]
+          requires: [prepare-dockerfiles-<<pipeline.parameters.lang>>-stable]
 
       - docker/hadolint:
-          name: lint-rust-stable-node
+          name: lint-<<pipeline.parameters.lang>>-stable-node
           context: image-publishing
           checkout: false
           attach-workspace: true
           workspace-root: ~/
           dockerfiles: *node-dockerfiles
           filters: *monthly-tag-jobs-filters
-          requires: [prepare-dockerfiles-rust-stable-node]
+          requires: [prepare-dockerfiles-<<pipeline.parameters.lang>>-stable-node]
 
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-stable
@@ -205,7 +210,7 @@ workflows:
           target: cimg
           monthly: true
           filters: *monthly-tag-jobs-filters
-          requires: [lint-rust-stable]
+          requires: [lint-<<pipeline.parameters.lang>>-stable]
 
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-stable-node
@@ -215,76 +220,76 @@ workflows:
           monthly: true
           node: true
           filters: *monthly-tag-jobs-filters
-          requires: [lint-rust-stable-node]
+          requires: [lint-<<pipeline.parameters.lang>>-stable-node]
 
   commit-ccitest-lint-dev:
     when: <<pipeline.parameters.commit>>
     jobs:
       - prepare-dockerfiles:
-          name: prepare-dockerfiles-rust-ccitest
+          name: prepare-dockerfiles-<<pipeline.parameters.lang>>-ccitest
           base-org-image-tag: cimg/base:edge
-          step-name: Prepare ccitest/rust Dockerfiles from template
+          step-name: Prepare ccitest/<<pipeline.parameters.lang>> Dockerfiles from template
           filters: *dev-filters
 
       - docker/hadolint:
-          name: lint-rust-ccitest
+          name: lint-<<pipeline.parameters.lang>>-ccitest
           checkout: false
           attach-workspace: true
           workspace-root: ~/
           dockerfiles: *dockerfiles
           filters: *dev-filters
-          requires: [prepare-dockerfiles-rust-ccitest]
+          requires: [prepare-dockerfiles-<<pipeline.parameters.lang>>-ccitest]
 
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-ccitest
           context: image-publishing
           filters: *dev-filters
-          requires: [lint-rust-ccitest]
+          requires: [lint-<<pipeline.parameters.lang>>-ccitest]
 
   commit-ccitest-node-lint-dev:
     when: <<pipeline.parameters.commit>>
     jobs:
       - prepare-dockerfiles:
-          name: prepare-dockerfiles-rust-ccitest-node
+          name: prepare-dockerfiles-<<pipeline.parameters.lang>>-ccitest-node
           base-org-image-tag: cimg/base:edge-node
-          step-name: Prepare ccitest/rust:node Dockerfiles from template
+          step-name: Prepare ccitest/<<pipeline.parameters.lang>>:node Dockerfiles from template
           variant: node
           filters: *dev-filters
 
       - docker/hadolint:
-          name: lint-rust-ccitest-node
+          name: lint-<<pipeline.parameters.lang>>-ccitest-node
           context: image-publishing
           checkout: false
           attach-workspace: true
           workspace-root: ~/
           dockerfiles: *node-dockerfiles
           filters: *dev-filters
-          requires: [prepare-dockerfiles-rust-ccitest-node]
+          requires: [prepare-dockerfiles-<<pipeline.parameters.lang>>-ccitest-node]
 
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-ccitest-node
           context: image-publishing
           node: true
           filters: *dev-filters
-          requires: [lint-rust-ccitest-node]
+          requires: [lint-<<pipeline.parameters.lang>>-ccitest-node]
 
   commit-edge-lint-master:
     when: <<pipeline.parameters.commit>>
     jobs:
       - prepare-dockerfiles:
-          name: prepare-dockerfiles-rust-edge
+          name: prepare-dockerfiles-<<pipeline.parameters.lang>>-edge
           base-org-image-tag: cimg/base:edge
-          step-name: Prepare cimg/rust:edge Dockerfiles from template
+          step-name: Prepare cimg/<<pipeline.parameters.lang>>:edge Dockerfiles from template
           filters: *master-filters
 
       - docker/hadolint:
-          name: lint-rust-edge
+          name: lint-<<pipeline.parameters.lang>>-edge
           checkout: false
           attach-workspace: true
           workspace-root: ~/
           dockerfiles: *dockerfiles
           filters: *master-filters
-          requires: [prepare-dockerfiles-rust-edge]
+          requires: [prepare-dockerfiles-<<pipeline.parameters.lang>>-edge]
 
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-edge
@@ -292,27 +297,27 @@ workflows:
           image-tag: edge
           target: cimg
           filters: *master-filters
-          requires: [lint-rust-edge]
+          requires: [lint-<<pipeline.parameters.lang>>-edge]
 
   commit-edge-node-lint-master:
     when: <<pipeline.parameters.commit>>
     jobs:
       - prepare-dockerfiles:
-          name: prepare-dockerfiles-rust-edge-node
+          name: prepare-dockerfiles-<<pipeline.parameters.lang>>-edge-node
           base-org-image-tag: cimg/base:edge-node
-          step-name: Prepare cimg/rust:edge-node Dockerfiles from template
+          step-name: Prepare cimg/<<pipeline.parameters.lang>>:edge-node Dockerfiles from template
           variant: node
           filters: *master-filters
 
       - docker/hadolint:
-          name: lint-rust-edge-node
+          name: lint-<<pipeline.parameters.lang>>-edge-node
           context: image-publishing
           checkout: false
           attach-workspace: true
           workspace-root: ~/
           dockerfiles: *node-dockerfiles
           filters: *master-filters
-          requires: [prepare-dockerfiles-rust-edge-node]
+          requires: [prepare-dockerfiles-<<pipeline.parameters.lang>>-edge-node]
 
       - trigger-pipeline-builds:
           name: trigger-pipeline-builds-edge-node
@@ -321,38 +326,38 @@ workflows:
           target: cimg
           node: true
           filters: *master-filters
-          requires: [lint-rust-edge-node]
+          requires: [lint-<<pipeline.parameters.lang>>-edge-node]
 
   build-test-deploy:
-    when: <<pipeline.parameters.build-rust>>
+    when: <<pipeline.parameters.build>>
     jobs:
       - cimg/build-test-deploy:
-          name: rust-<<pipeline.parameters.rust-version>>
+          name: <<pipeline.parameters.lang>>-<<pipeline.parameters.version>>
           context: image-publishing
           restore-cache: true
-          cache-key: rust-dockerfiles-{{ .Branch }}-{{ .Revision }}
-          dockerfile-path: ~/project/rust/<<pipeline.parameters.rust-version>>
-          image-name: <<pipeline.parameters.target>>/rust
-          image-tag: <<pipeline.parameters.rust-version>>-<<pipeline.parameters.image-tag>>
+          cache-key: <<pipeline.parameters.lang>>-dockerfiles-{{ .Branch }}-{{ .Revision }}
+          dockerfile-path: ~/project/<<pipeline.parameters.lang>>/<<pipeline.parameters.version>>
+          image-name: <<pipeline.parameters.target>>/<<pipeline.parameters.lang>>
+          image-tag: <<pipeline.parameters.version>>-<<pipeline.parameters.image-tag>>
           extra-build-args: --pull
           goss-yaml-dir-path: ~/project
-          test-suite-name: rust
+          test-suite-name: <<pipeline.parameters.lang>>
           deploy: true
           publish-tags: *publish-tags
 
   build-test-deploy-node:
-    when: <<pipeline.parameters.build-rust-node>>
+    when: <<pipeline.parameters.build-node>>
     jobs:
       - cimg/build-test-deploy:
-          name: rust-<<pipeline.parameters.rust-version>>-node
+          name: <<pipeline.parameters.lang>>-<<pipeline.parameters.version>>-node
           context: image-publishing
           restore-cache: true
-          cache-key: rust-dockerfiles-node-{{ .Branch }}-{{ .Revision }}
-          dockerfile-path: ~/project/node/<<pipeline.parameters.rust-version>>
-          image-name: <<pipeline.parameters.target>>/rust
-          image-tag: <<pipeline.parameters.rust-version>>-<<pipeline.parameters.image-tag>>-node
+          cache-key: <<pipeline.parameters.lang>>-node-dockerfiles-{{ .Branch }}-{{ .Revision }}
+          dockerfile-path: ~/project/<<pipeline.parameters.lang>>-node/<<pipeline.parameters.version>>
+          image-name: <<pipeline.parameters.target>>/<<pipeline.parameters.lang>>
+          image-tag: <<pipeline.parameters.version>>-<<pipeline.parameters.image-tag>>-node
           extra-build-args: --pull
           goss-yaml-dir-path: ~/project
-          test-suite-name: rust-node
+          test-suite-name: <<pipeline.parameters.lang>>-node
           deploy: true
           publish-tags: *node-publish-tags
