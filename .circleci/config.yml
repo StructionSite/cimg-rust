@@ -98,8 +98,8 @@ jobs:
 
             source ./manifest
 
-            <<#parameters.variant>>mkdir -p <<parameters.variant>>
-            cd <<parameters.variant>><</parameters.variant>>
+            <<#parameters.variant>>mkdir -p rust-<<parameters.variant>>
+            cd rust-<<parameters.variant>><</parameters.variant>>
             <<^parameters.variant>>mkdir -p rust
             cd rust<</parameters.variant>>
 
@@ -138,13 +138,13 @@ monthly-tag-jobs-filters: &monthly-tag-jobs-filters
   branches:
     ignore: /.*/
   tags:
-    only: /monthly.*/
+    only: /.*monthly.*/
 
 dockerfiles: &dockerfiles
   rust/1.34.0/Dockerfile,rust/1.34.1/Dockerfile,rust/1.34.2/Dockerfile,rust/1.35.0/Dockerfile,rust/1.36.0/Dockerfile
 
 node-dockerfiles: &node-dockerfiles
-  node/1.34.0/Dockerfile,node/1.34.1/Dockerfile,node/1.34.2/Dockerfile,node/1.35.0/Dockerfile,node/1.36.0/Dockerfile
+  rust-node/1.34.0/Dockerfile,rust-node/1.34.1/Dockerfile,rust-node/1.34.2/Dockerfile,rust-node/1.35.0/Dockerfile,rust-node/1.36.0/Dockerfile
 
 publish-tags: &publish-tags
   latest<<#pipeline.parameters.monthly>>,<<pipeline.parameters.rust-version>>-stable<</pipeline.parameters.monthly>>
